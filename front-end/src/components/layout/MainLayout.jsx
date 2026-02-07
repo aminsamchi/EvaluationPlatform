@@ -9,7 +9,9 @@ const MainLayout = ({ children }) => {
       <div className="flex">
         <Sidebar />
         <main className="flex-1 ml-64 p-8">
-          {children}
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>

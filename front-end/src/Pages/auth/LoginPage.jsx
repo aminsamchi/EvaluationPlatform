@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock } from 'lucide-react';
+import { Mail, Lock, Shield } from 'lucide-react';
 import { Button, Input } from '../../components/common';
 import { ROUTES } from '../../utils/constants';
 
@@ -17,7 +17,6 @@ const LoginPage = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Simple validation
     const newErrors = {};
     if (!formData.email) newErrors.email = 'Email is required';
     if (!formData.password) newErrors.password = 'Password is required';
@@ -27,7 +26,6 @@ const LoginPage = () => {
       return;
     }
     
-    // Mock login
     const mockUser = {
       id: 1,
       email: formData.email,
@@ -42,19 +40,28 @@ const LoginPage = () => {
   };
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+        {/* Logo & Title */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to your account</p>
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg">
+            <Shield size={32} className="text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Welcome Back
+          </h1>
+          <p className="text-gray-600">
+            Sign in to Governance Evaluation Platform
+          </p>
         </div>
         
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        {/* Login Card */}
+        <div className="bg-white rounded-2xl shadow-xl p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             <Input
               type="email"
               name="email"
-              label="Email"
+              label="Email Address"
               placeholder="you@example.com"
               value={formData.email}
               onChange={handleChange}
@@ -66,7 +73,7 @@ const LoginPage = () => {
               type="password"
               name="password"
               label="Password"
-              placeholder="Enter password"
+              placeholder="Enter your password"
               value={formData.password}
               onChange={handleChange}
               error={errors.password}
@@ -81,12 +88,16 @@ const LoginPage = () => {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
-              <Link to={ROUTES.REGISTER} className="text-primary-600 hover:text-primary-700 font-medium">
+              <Link to={ROUTES.REGISTER} className="text-blue-600 hover:text-blue-700 font-medium">
                 Sign up
               </Link>
             </p>
           </div>
         </div>
+        
+        <p className="mt-8 text-center text-sm text-gray-500">
+          🔒 Protected by industry-standard encryption
+        </p>
       </div>
     </div>
   );

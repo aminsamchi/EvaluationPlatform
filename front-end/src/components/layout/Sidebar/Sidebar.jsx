@@ -1,14 +1,27 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings } from 'lucide-react';
 import clsx from 'clsx';
 
 const Sidebar = () => {
   const location = useLocation();
   
   const menuItems = [
-    { label: 'Dashboard', icon: LayoutDashboard, path: '/organization/dashboard' },
-    { label: 'Evaluations', icon: FileText, path: '/organization/evaluations' },
+    { 
+      label: 'Dashboard', 
+      icon: LayoutDashboard, 
+      path: '/organization/dashboard' 
+    },
+    { 
+      label: 'Evaluations', 
+      icon: FileText, 
+      path: '/organization/evaluations' 
+    },
+    { 
+      label: 'Settings', 
+      icon: Settings, 
+      path: '/organization/settings' 
+    },
   ];
   
   return (
@@ -23,13 +36,13 @@ const Sidebar = () => {
               key={item.path}
               to={item.path}
               className={clsx(
-                'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
+                'flex items-center gap-3 px-4 py-3 rounded-lg transition-all',
                 isActive
-                  ? 'bg-primary-50 text-primary-700 font-medium'
+                  ? 'bg-blue-50 text-blue-700 font-medium shadow-sm'
                   : 'text-gray-700 hover:bg-gray-100'
               )}
             >
-              <Icon size={20} />
+              <Icon size={20} className={isActive ? 'text-blue-600' : 'text-gray-500'} />
               <span>{item.label}</span>
             </Link>
           );
