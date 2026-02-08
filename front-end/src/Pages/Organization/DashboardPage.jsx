@@ -1,142 +1,509 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import MainLayout from '../../components/layout/MainLayout';
-import { 
-  FileText, 
-  TrendingUp, 
-  AlertCircle, 
-  Award,
-  Plus,
-  BarChart3,
-  CheckCircle2
-} from 'lucide-react';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem('gov_user') || '{}');
-
-  // Stats Data
-  const stats = [
-    { label: 'Current Status', value: 'DRAFT', subtitle: '65% Complete', icon: FileText, bgColor: 'bg-slate-700', trend: null },
-    { label: 'Pending Actions', value: '3', subtitle: 'Items to complete', icon: AlertCircle, bgColor: 'bg-slate-600', trend: null },
-    { label: 'Latest Score', value: '85', subtitle: 'Last evaluation', icon: Award, bgColor: 'bg-slate-700', trend: '+5' },
-    { label: 'Completed', value: '12', subtitle: 'Total evaluations', icon: TrendingUp, bgColor: 'bg-slate-600', trend: '+2' },
-  ];
-
-  // Recent Activity
-  const recentActivity = [
-    { id: 1, action: 'Evaluation submitted', time: '2 days ago', icon: CheckCircle2, iconBg: 'bg-slate-100', iconColor: 'text-slate-700' },
-    { id: 2, action: 'Draft saved', time: '5 days ago', icon: FileText, iconBg: 'bg-slate-100', iconColor: 'text-slate-600' },
-    { id: 3, action: 'Criterion completed', time: '1 week ago', icon: CheckCircle2, iconBg: 'bg-slate-100', iconColor: 'text-slate-700' },
-    { id: 4, action: 'Evidence uploaded', time: '1 week ago', icon: FileText, iconBg: 'bg-slate-100', iconColor: 'text-slate-600' }
-  ];
-
-  const handleStartEvaluation = () => {
-    navigate('/organization/evaluation/new');
+  const user = JSON.parse(localStorage.getItem('governance_user') || '{}');
+  
+  const [stats, setStats] = useState({
+    activeEvaluations: 0,
+    completed: 0,
+    pendingReview: 0,
+    score: 0,
+  });
+  
+  const [recentActivity, setRecentActivity] = useState([]);
+  
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+  
+  const loadDashboardData = () => {
+    // Load evaluations from localStorage
+    let activeCount = 0;
+    let completedCount = 0;
+    let pendingCount = 0;
+    const activities = [];
+    
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('evaluation_')) {
+        const evaluation = JSON.parse(localStorage.getItem(key));
+        
+        if (evaluation.status === 'draft') activeCount++;
+        if (evaluation.status === 'approved') completedCount++;
+        if (evaluation.status === 'submitted' || evaluation.status === 'under-review') pendingCount++;
+        
+        // Add to recent activity
+        activities.push({
+          type: evaluation.status === 'submitted' ? 'submitted' : 'draft',
+          text: evaluation.status === 'submitted' ? 'Evaluation submitted' : 'Draft saved',
+          date: evaluation.createdDate,
+        });
+      }
+    }
+    
+    // Sort activities by date
+    activities.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    setStats({
+      activeEvaluations: activeCount,
+      completed: completedCount,
+      pendingReview: pendingCount,
+      score: completedCount > 0 ? 85 : 0, // Mock score
+    });
+    
+    setRecentActivity(activities.slice(0, 4));
   };
-
-  const handleViewResults = () => {
-    navigate('/organization/results'); // implement later
+  
+  const handleLogout = () => {
+    localStorage.removeItem('governance_token');
+    localStorage.removeItem('governance_user');
+    navigate('/login');
   };
-
+  
+  const getTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now - date;
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+    
+    if (diffInDays === 0) return 'Today';
+    if (diffInDays === 1) return '1 day ago';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} week${Math.floor(diffInDays / 7) > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
+  };
+  
+  const styles = {
+    container: {
+      minHeight: '100vh',
+      background: '#f9fafb',
+    },
+    header: {
+      background: 'white',
+      borderBottom: '1px solid #e5e7eb',
+      padding: '16px 0',
+      position: 'sticky',
+      top: 0,
+      zIndex: 40,
+      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    },
+    headerContent: {
+      maxWidth: '1280px',
+      margin: '0 auto',
+      padding: '0 24px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    logo: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      cursor: 'pointer',
+    },
+    logoIcon: {
+      width: '40px',
+      height: '40px',
+      background: '#2563eb',
+      borderRadius: '8px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '20px',
+    },
+    logoText: {
+      fontSize: '20px',
+      fontWeight: 'bold',
+      color: '#111827',
+    },
+    userSection: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '16px',
+    },
+    userInfo: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      padding: '8px 12px',
+      background: '#f3f4f6',
+      borderRadius: '8px',
+    },
+    logoutBtn: {
+      padding: '8px 16px',
+      background: '#ef4444',
+      color: 'white',
+      border: 'none',
+      borderRadius: '8px',
+      cursor: 'pointer',
+      fontSize: '14px',
+      fontWeight: '500',
+      transition: 'background 0.2s',
+    },
+    layout: {
+      display: 'flex',
+      maxWidth: '1280px',
+      margin: '0 auto',
+    },
+    sidebar: {
+      width: '250px',
+      background: 'white',
+      borderRight: '1px solid #e5e7eb',
+      padding: '24px 0',
+      height: 'calc(100vh - 64px)',
+      position: 'sticky',
+      top: '64px',
+    },
+    menuItem: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      padding: '12px 24px',
+      color: '#374151',
+      cursor: 'pointer',
+      fontSize: '14px',
+      fontWeight: '500',
+      transition: 'background 0.2s',
+    },
+    menuItemActive: {
+      background: '#eff6ff',
+      color: '#2563eb',
+      borderLeft: '3px solid #2563eb',
+    },
+    main: {
+      flex: 1,
+      padding: '32px 24px',
+    },
+    pageTitle: {
+      fontSize: '32px',
+      fontWeight: 'bold',
+      color: '#111827',
+      marginBottom: '8px',
+    },
+    pageSubtitle: {
+      color: '#6b7280',
+      marginBottom: '32px',
+    },
+    statsGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+      gap: '24px',
+      marginBottom: '32px',
+    },
+    statCard: {
+      background: 'white',
+      borderRadius: '12px',
+      padding: '24px',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+      transition: 'box-shadow 0.2s',
+      cursor: 'pointer',
+    },
+    statContent: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    statInfo: {
+      display: 'flex',
+      flexDirection: 'column',
+    },
+    statLabel: {
+      fontSize: '14px',
+      color: '#6b7280',
+      marginBottom: '8px',
+    },
+    statValue: {
+      fontSize: '36px',
+      fontWeight: 'bold',
+      color: '#111827',
+    },
+    statIcon: {
+      width: '48px',
+      height: '48px',
+      borderRadius: '12px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '24px',
+    },
+    section: {
+      background: 'white',
+      borderRadius: '12px',
+      padding: '24px',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+      marginBottom: '24px',
+    },
+    sectionHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: '20px',
+    },
+    sectionTitle: {
+      fontSize: '20px',
+      fontWeight: '600',
+      color: '#111827',
+    },
+    viewAllLink: {
+      fontSize: '14px',
+      color: '#2563eb',
+      cursor: 'pointer',
+      fontWeight: '500',
+    },
+    activityList: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px',
+    },
+    activityItem: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      padding: '12px',
+      background: '#f9fafb',
+      borderRadius: '8px',
+    },
+    activityIcon: {
+      width: '40px',
+      height: '40px',
+      borderRadius: '8px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '18px',
+    },
+    activityText: {
+      flex: 1,
+    },
+    activityTitle: {
+      fontSize: '14px',
+      fontWeight: '500',
+      color: '#111827',
+      marginBottom: '4px',
+    },
+    activityDate: {
+      fontSize: '12px',
+      color: '#6b7280',
+    },
+    quickActions: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+      gap: '16px',
+    },
+    actionButton: {
+      padding: '20px',
+      background: '#2563eb',
+      color: 'white',
+      border: 'none',
+      borderRadius: '12px',
+      cursor: 'pointer',
+      fontSize: '16px',
+      fontWeight: '600',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '12px',
+      transition: 'background 0.2s',
+    },
+    actionButtonSecondary: {
+      background: 'white',
+      color: '#374151',
+      border: '2px solid #e5e7eb',
+    },
+  };
+  
+  const statsData = [
+    { 
+      label: 'Active Evaluations', 
+      value: stats.activeEvaluations, 
+      icon: '📝', 
+      color: '#3b82f6',
+      bgColor: '#dbeafe'
+    },
+    { 
+      label: 'Completed', 
+      value: stats.completed, 
+      icon: '✅', 
+      color: '#10b981',
+      bgColor: '#d1fae5'
+    },
+    { 
+      label: 'Pending Review', 
+      value: stats.pendingReview, 
+      icon: '⏳', 
+      color: '#f59e0b',
+      bgColor: '#fef3c7'
+    },
+    { 
+      label: 'Latest Score', 
+      value: stats.score, 
+      icon: '🏆', 
+      color: '#8b5cf6',
+      bgColor: '#ede9fe'
+    },
+  ];
+  
   return (
-    <MainLayout>
-      <div className="space-y-8">
-        {/* Header */}
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600 mt-1">
-              Welcome back, <span className="font-semibold text-slate-700">{user.name || 'User'}</span>
-            </p>
+    <div style={styles.container}>
+      {/* Header */}
+      <header style={styles.header}>
+        <div style={styles.headerContent}>
+          <div style={styles.logo} onClick={() => navigate('/organization/dashboard')}>
+            <div style={styles.logoIcon}>🛡️</div>
+            <span style={styles.logoText}>Governance Platform</span>
           </div>
-          <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700">
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          
+          <div style={styles.userSection}>
+            <div style={styles.userInfo}>
+              <span>👤</span>
+              <span style={{ fontSize: '14px', fontWeight: '500' }}>
+                {user.fullName || 'User'}
+              </span>
+            </div>
+            <button 
+              onClick={handleLogout}
+              style={styles.logoutBtn}
+              onMouseEnter={(e) => e.target.style.background = '#dc2626'}
+              onMouseLeave={(e) => e.target.style.background = '#ef4444'}
+            >
+              Logout
+            </button>
           </div>
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <div key={index} className="bg-white rounded-lg p-6 border border-gray-300 hover:border-gray-400 transition-all hover:shadow-md">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600 mb-2">{stat.label}</p>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-4xl font-bold text-gray-900">{stat.value}</h2>
-                      {stat.trend && <span className="text-sm font-semibold px-2 py-1 bg-slate-100 text-slate-700 rounded">{stat.trend}</span>}
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">{stat.subtitle}</p>
+      </header>
+      
+      <div style={styles.layout}>
+        {/* Sidebar */}
+        <aside style={styles.sidebar}>
+          <div style={{...styles.menuItem, ...styles.menuItemActive}}>
+            <span>📊</span>
+            <span>Dashboard</span>
+          </div>
+          <div 
+            style={styles.menuItem}
+            onClick={() => navigate('/organization/evaluations')}
+            onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          >
+            <span>📝</span>
+            <span>Evaluations</span>
+          </div>
+          <div 
+            style={styles.menuItem}
+            onClick={() => navigate('/organization/results')}
+            onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          >
+            <span>📈</span>
+            <span>Results</span>
+          </div>
+          <div 
+            style={styles.menuItem}
+            onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          >
+            <span>⚙️</span>
+            <span>Settings</span>
+          </div>
+        </aside>
+        
+        {/* Main Content */}
+        <main style={styles.main}>
+          <h1 style={styles.pageTitle}>Dashboard</h1>
+          <p style={styles.pageSubtitle}>
+            Welcome back, {user.fullName || 'User'}!
+          </p>
+          
+          {/* Stats Grid */}
+          <div style={styles.statsGrid}>
+            {statsData.map((stat, index) => (
+              <div 
+                key={index}
+                style={styles.statCard}
+                onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 10px 15px rgba(0,0,0,0.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)'}
+              >
+                <div style={styles.statContent}>
+                  <div style={styles.statInfo}>
+                    <p style={styles.statLabel}>{stat.label}</p>
+                    <p style={styles.statValue}>{stat.value}</p>
                   </div>
-                  <div className={`w-14 h-14 ${stat.bgColor} rounded-lg flex items-center justify-center text-white`}>
-                    <Icon size={24} />
+                  <div style={{
+                    ...styles.statIcon,
+                    background: stat.bgColor,
+                  }}>
+                    {stat.icon}
                   </div>
                 </div>
               </div>
-            );
-          })}
-        </div>
-
-        {/* Progress */}
-        <div className="bg-white rounded-lg p-6 border border-gray-300">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Evaluation Progress</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <p className="text-sm font-medium text-gray-700">15 of 23 criteria completed</p>
-              <p className="text-xl font-bold text-slate-700">65%</p>
-            </div>
-            <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div className="h-full bg-slate-600 rounded-full transition-all duration-500" style={{ width: '65%' }}></div>
+            ))}
+          </div>
+          
+          {/* Quick Actions */}
+          <div style={styles.section}>
+            <h2 style={styles.sectionTitle}>Quick Actions</h2>
+            <div style={styles.quickActions}>
+              <button
+                style={styles.actionButton}
+                onClick={() => navigate('/organization/evaluations/new')}
+                onMouseEnter={(e) => e.target.style.background = '#1d4ed8'}
+                onMouseLeave={(e) => e.target.style.background = '#2563eb'}
+              >
+                <span>➕</span>
+                <span>Start New Evaluation</span>
+              </button>
+              <button
+                style={{...styles.actionButton, ...styles.actionButtonSecondary}}
+                onClick={() => navigate('/organization/results')}
+                onMouseEnter={(e) => e.target.style.background = '#f9fafb'}
+                onMouseLeave={(e) => e.target.style.background = 'white'}
+              >
+                <span>📊</span>
+                <span>View Results</span>
+              </button>
             </div>
           </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold text-gray-900">Recent Activity</h3>
-            <a href="/organization/evaluations" className="text-sm font-semibold text-slate-700 hover:text-slate-900">
-              View all →
-            </a>
-          </div>
-          <div className="bg-white rounded-lg p-6 border border-gray-300">
-            <div className="space-y-4">
-              {recentActivity.map(activity => {
-                const ActivityIcon = activity.icon;
-                return (
-                  <div key={activity.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className={`w-8 h-8 ${activity.iconBg} rounded-lg flex items-center justify-center ${activity.iconColor} flex-shrink-0`}>
-                      <ActivityIcon size={16} />
+          
+          {/* Recent Activity */}
+          <div style={styles.section}>
+            <div style={styles.sectionHeader}>
+              <h2 style={styles.sectionTitle}>Recent Activity</h2>
+              <span 
+                style={styles.viewAllLink}
+                onClick={() => navigate('/organization/evaluations')}
+              >
+                View all →
+              </span>
+            </div>
+            
+            {recentActivity.length > 0 ? (
+              <div style={styles.activityList}>
+                {recentActivity.map((activity, index) => (
+                  <div key={index} style={styles.activityItem}>
+                    <div style={{
+                      ...styles.activityIcon,
+                      background: activity.type === 'submitted' ? '#d1fae5' : '#dbeafe'
+                    }}>
+                      {activity.type === 'submitted' ? '✅' : '📝'}
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                      <p className="text-sm text-gray-500">{activity.time}</p>
+                    <div style={styles.activityText}>
+                      <p style={styles.activityTitle}>{activity.text}</p>
+                      <p style={styles.activityDate}>{getTimeAgo(activity.date)}</p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ textAlign: 'center', color: '#6b7280', padding: '40px 0' }}>
+                No recent activity. Start a new evaluation to get started!
+              </p>
+            )}
           </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button onClick={handleStartEvaluation} className="flex items-center justify-center gap-2 px-6 py-4 bg-slate-700 text-white rounded-lg font-semibold hover:bg-slate-800 transition-all hover:shadow-md">
-              <Plus size={20} />
-              <span>Start New Evaluation</span>
-            </button>
-            <button onClick={handleViewResults} className="flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-slate-700 text-slate-700 rounded-lg font-semibold hover:bg-slate-700 hover:text-white transition-all">
-              <BarChart3 size={20} />
-              <span>View Results</span>
-            </button>
-          </div>
-        </div>
+        </main>
       </div>
-    </MainLayout>
+    </div>
   );
 };
 

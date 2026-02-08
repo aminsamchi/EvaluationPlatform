@@ -3,22 +3,37 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './Pages/auth/LoginPage';
 import RegisterPage from './Pages/auth/RegisterPage';
 import DashboardPage from './Pages/Organization/DashboardPage';
-import EvaluationFormPage from './Pages/Organization/EvaluationFormPage';
+import EvaluationsListPage from './Pages/Organization/EvaluationsListPage';
+import NewEvaluationPage from './Pages/Organization/NewEvaluationPage';
+import EvaluationDetailsPage from './Pages/Organization/EvaluationDetailsPage';
+import ResultsPage from './Pages/Organization/ResultsPage';
 import { ROUTES, STORAGE_KEYS, USER_ROLES } from './utils/constants';
 
-// Protected Route component
+// Protected Route component - FIXED VERSION
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-  const user = JSON.parse(localStorage.getItem(STORAGE_KEYS.USER) || '{}');
-
+  const userStr = localStorage.getItem(STORAGE_KEYS.USER);
+  
+  console.log('🔐 ProtectedRoute Check:', { token, userStr }); // Debug log
+  
   if (!token) {
-    // Not logged in → go to login
+    console.log('❌ No token found, redirecting to login');
     return <Navigate to={ROUTES.LOGIN} replace />;
   }
 
-  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-    // Role not allowed → go to unauthorized page (you can create this later)
-    return <Navigate to="/unauthorized" replace />;
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      console.log('✅ User found:', user); // Debug log
+      
+      if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+        console.log('❌ Role not allowed:', user.role);
+        return <Navigate to="/unauthorized" replace />;
+      }
+    } catch (error) {
+      console.error('❌ Error parsing user:', error);
+      return <Navigate to={ROUTES.LOGIN} replace />;
+    }
   }
 
   return children;
@@ -32,7 +47,7 @@ function App() {
         <Route path={ROUTES.LOGIN} element={<LoginPage />} />
         <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
 
-        {/* Protected Routes */}
+        {/* Organization Routes - Protected */}
         <Route
           path={ROUTES.ORG_DASHBOARD}
           element={
@@ -41,16 +56,44 @@ function App() {
             </ProtectedRoute>
           }
         />
+        
         <Route
-          path="/organization/evaluation/new"
+          path={ROUTES.ORG_EVALUATIONS}
           element={
             <ProtectedRoute allowedRoles={[USER_ROLES.ORGANIZATION]}>
-              <EvaluationFormPage />
+              <EvaluationsListPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path={ROUTES.ORG_EVALUATION_NEW}
+          element={
+            <ProtectedRoute allowedRoles={[USER_ROLES.ORGANIZATION]}>
+              <NewEvaluationPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/organization/evaluations/:id"
+          element={
+            <ProtectedRoute allowedRoles={[USER_ROLES.ORGANIZATION]}>
+              <EvaluationDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path={ROUTES.ORG_RESULTS}
+          element={
+            <ProtectedRoute allowedRoles={[USER_ROLES.ORGANIZATION]}>
+              <ResultsPage />
             </ProtectedRoute>
           }
         />
 
-        {/* Default & fallback */}
+        {/* Default Routes */}
         <Route path="/" element={<Navigate to={ROUTES.LOGIN} replace />} />
         <Route path="*" element={<Navigate to={ROUTES.LOGIN} replace />} />
       </Routes>
