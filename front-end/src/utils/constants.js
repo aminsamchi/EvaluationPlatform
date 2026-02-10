@@ -389,3 +389,42 @@ export const GOVERNANCE_PRINCIPLES = [
     ],
   },
 ];
+export const EVALUATION_STATUS = {
+  DRAFT: 'draft',
+  SUBMITTED: 'submitted',
+  UNDER_REVIEW: 'under-review',
+  APPROVED: 'approved',
+  CONDITIONAL: 'conditional',
+  REVISION_REQUESTED: 'revision-requested',
+  REJECTED: 'rejected',
+};
+
+export const EVIDENCE_QUALITY = {
+  INSUFFICIENT: 'insufficient',
+  ADEQUATE: 'adequate',
+  EXCELLENT: 'excellent',
+};
+
+export const GOVERNANCE_LABELS = [
+  { min: 90, label: 'Platinum', color: '#a855f7', bgColor: '#f3e8ff', description: 'Exceptional governance' },
+  { min: 75, label: 'Gold', color: '#eab308', bgColor: '#fef9c3', description: 'Excellent governance' },
+  { min: 60, label: 'Silver', color: '#64748b', bgColor: '#f1f5f9', description: 'Good governance' },
+  { min: 50, label: 'Bronze', color: '#f97316', bgColor: '#ffedd5', description: 'Acceptable governance' },
+  { min: 0, label: 'Not Certified', color: '#6b7280', bgColor: '#f3f4f6', description: 'Below standards' }
+];
+
+// Helper function
+export const getGovernanceLabel = (score) => {
+  const label = GOVERNANCE_LABELS.find(l => score >= l.min);
+  return label || GOVERNANCE_LABELS[GOVERNANCE_LABELS.length - 1];
+};
+
+export const calculateTotalCriteria = () => {
+  return GOVERNANCE_PRINCIPLES.reduce((total, principle) => {
+    return total + principle.practices.reduce((pTotal, practice) => {
+      return pTotal + practice.criteria.length;
+    }, 0);
+  }, 0);
+};
+
+export const TOTAL_CRITERIA = 158;

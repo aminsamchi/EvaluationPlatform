@@ -2,27 +2,34 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './Pages/auth/LoginPage';
 import RegisterPage from './Pages/auth/RegisterPage';
+
+// Organization Pages
 import DashboardPage from './Pages/Organization/DashboardPage';
 import EvaluationsListPage from './Pages/Organization/EvaluationsListPage';
 import NewEvaluationPage from './Pages/Organization/NewEvaluationPage';
 import EvaluationFormPage from './Pages/Organization/EvaluationFormPage';
 import EvaluationDetailsPage from './Pages/Organization/EvaluationDetailsPage';
 import ResultsPage from './Pages/Organization/ResultsPage';
+
+// Evaluator Pages
+import EvalDashboardPage from './Pages/Evaluator/DashboardPage';
+import EvaluationAnalysisPage from './Pages/Evaluator/EvaluationAnalysisPage';
+import EvidenceVerificationPage from './Pages/Evaluator/EvidenceVerificationPage';
+import ScoreAdjustmentPage from './Pages/Evaluator/ScoreAdjustmentPage';
+import ReviewEvaluationPage from './Pages/Evaluator/ReviewEvaluationPage';
+
 import { ROUTES, STORAGE_KEYS, USER_ROLES } from './utils/constants';
 
 // Protected Route component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
   const userStr = localStorage.getItem(STORAGE_KEYS.USER);
-  
-  if (!token) {
-    return <Navigate to={ROUTES.LOGIN} replace />;
-  }
+
+  if (!token) return <Navigate to={ROUTES.LOGIN} replace />;
 
   if (userStr) {
     try {
       const user = JSON.parse(userStr);
-      
       if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
         return <Navigate to={ROUTES.LOGIN} replace />;
       }
@@ -43,7 +50,7 @@ function App() {
         <Route path={ROUTES.LOGIN} element={<LoginPage />} />
         <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
 
-        {/* Organization Routes - Protected */}
+        {/* Organization Routes */}
         <Route
           path={ROUTES.ORG_DASHBOARD}
           element={
@@ -52,7 +59,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        
         <Route
           path={ROUTES.ORG_EVALUATIONS}
           element={
@@ -61,7 +67,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        
         <Route
           path={ROUTES.ORG_EVALUATION_NEW}
           element={
@@ -70,7 +75,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        
         <Route
           path="/organization/evaluations/:id/form"
           element={
@@ -79,7 +83,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        
         <Route
           path="/organization/evaluations/:id"
           element={
@@ -88,7 +91,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        
         <Route
           path={ROUTES.ORG_RESULTS}
           element={
@@ -98,7 +100,49 @@ function App() {
           }
         />
 
-        {/* Default Routes */}
+        {/* Evaluator Routes */}
+        <Route
+          path={ROUTES.EVAL_DASHBOARD}
+          element={
+            <ProtectedRoute allowedRoles={[USER_ROLES.EVALUATOR]}>
+              <EvalDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/evaluator/analysis/:id"
+          element={
+            <ProtectedRoute allowedRoles={[USER_ROLES.EVALUATOR]}>
+              <EvaluationAnalysisPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/evaluator/evidence/:id"
+          element={
+            <ProtectedRoute allowedRoles={[USER_ROLES.EVALUATOR]}>
+              <EvidenceVerificationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/evaluator/adjustment/:id"
+          element={
+            <ProtectedRoute allowedRoles={[USER_ROLES.EVALUATOR]}>
+              <ScoreAdjustmentPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/evaluator/review/:id"
+          element={
+            <ProtectedRoute allowedRoles={[USER_ROLES.EVALUATOR]}>
+              <ReviewEvaluationPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Default & fallback */}
         <Route path="/" element={<Navigate to={ROUTES.LOGIN} replace />} />
         <Route path="*" element={<Navigate to={ROUTES.LOGIN} replace />} />
       </Routes>

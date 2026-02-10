@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Shield } from 'lucide-react';
+import { Button, Input } from '../../components/common';
+import { ROUTES, USER_ROLES, STORAGE_KEYS } from '../../utils/constants';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({ 
+    email: '', 
+    password: '',
+    role: USER_ROLES.ORGANIZATION // Default role
+  });
   const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
   
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -14,243 +20,139 @@ const LoginPage = () => {
   
   const handleSubmit = (e) => {
     e.preventDefault();
-    setLoading(true);
     
-    // Validation
     const newErrors = {};
     if (!formData.email) newErrors.email = 'Email is required';
     if (!formData.password) newErrors.password = 'Password is required';
+    if (!formData.role) newErrors.role = 'Please select a role';
     
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      setLoading(false);
       return;
     }
     
-    // Mock login - Create user object
+    // Create mock user with selected role
     const mockUser = {
-      id: 1,
+      id: Date.now(),
       email: formData.email,
-      fullName: 'John Doe',
-      role: 'ORGANIZATION', // EXACT match to constants
+      name: formData.email.split('@')[0], // Use email prefix as name
+      role: formData.role,
     };
     
     // Save to localStorage
-    localStorage.setItem('governance_token', 'mock-token-12345');
-    localStorage.setItem('governance_user', JSON.stringify(mockUser));
+    localStorage.setItem(STORAGE_KEYS.TOKEN, 'mock-token-' + Date.now());
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(mockUser));
     
-    // Debug logs
-    console.log('✅ Login successful!');
-    console.log('Token saved:', localStorage.getItem('governance_token'));
-    console.log('User saved:', localStorage.getItem('governance_user'));
-    
-    // Small delay to show loading state
-    setTimeout(() => {
-      setLoading(false);
-      navigate('/organization/dashboard');
-    }, 500);
-  };
-  
-  const styles = {
-    container: {
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(to bottom right, #dbeafe, #ffffff)',
-      padding: '20px',
-    },
-    wrapper: {
-      width: '100%',
-      maxWidth: '500px',
-    },
-    header: {
-      textAlign: 'center',
-      marginBottom: '32px',
-    },
-    iconWrapper: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: '64px',
-      height: '64px',
-      background: '#2563eb',
-      borderRadius: '16px',
-      marginBottom: '16px',
-      boxShadow: '0 10px 15px rgba(0,0,0,0.1)',
-    },
-    title: {
-      fontSize: '32px',
-      fontWeight: 'bold',
-      color: '#111827',
-      marginBottom: '8px',
-    },
-    subtitle: {
-      color: '#6b7280',
-      fontSize: '16px',
-    },
-    card: {
-      background: 'white',
-      borderRadius: '16px',
-      boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-      padding: '40px',
-    },
-    form: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '24px',
-    },
-    inputGroup: {
-      display: 'flex',
-      flexDirection: 'column',
-    },
-    label: {
-      marginBottom: '8px',
-      fontSize: '14px',
-      fontWeight: '500',
-      color: '#374151',
-    },
-    input: {
-      padding: '12px 16px',
-      border: '1px solid #d1d5db',
-      borderRadius: '8px',
-      fontSize: '16px',
-      outline: 'none',
-      transition: 'all 0.2s',
-    },
-    inputFocus: {
-      borderColor: '#2563eb',
-      boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.1)',
-    },
-    inputError: {
-      borderColor: '#ef4444',
-    },
-    error: {
-      color: '#ef4444',
-      fontSize: '14px',
-      marginTop: '6px',
-    },
-    button: {
-      padding: '14px',
-      background: '#2563eb',
-      color: 'white',
-      border: 'none',
-      borderRadius: '8px',
-      fontSize: '16px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      transition: 'background 0.2s',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '8px',
-    },
-    buttonDisabled: {
-      opacity: 0.5,
-      cursor: 'not-allowed',
-    },
-    footer: {
-      marginTop: '24px',
-      textAlign: 'center',
-      fontSize: '14px',
-      color: '#6b7280',
-    },
-    link: {
-      color: '#2563eb',
-      textDecoration: 'none',
-      fontWeight: '500',
-    },
-    securityNote: {
-      marginTop: '32px',
-      textAlign: 'center',
-      fontSize: '14px',
-      color: '#9ca3af',
-    },
+    // Redirect based on role
+    if (formData.role === USER_ROLES.ORGANIZATION) {
+      navigate(ROUTES.ORG_DASHBOARD);
+    } else if (formData.role === USER_ROLES.EVALUATOR) {
+      navigate(ROUTES.EVAL_DASHBOARD);
+    } else if (formData.role === USER_ROLES.ADMINISTRATOR) {
+      navigate(ROUTES.ADMIN_DASHBOARD);
+    } else {
+      navigate(ROUTES.ORG_DASHBOARD); // Fallback
+    }
   };
   
   return (
-    <div style={styles.container}>
-      <div style={styles.wrapper}>
-        <div style={styles.header}>
-          <div style={styles.iconWrapper}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo & Title */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg">
+            <Shield size={32} className="text-white" />
           </div>
-          <h1 style={styles.title}>Welcome Back</h1>
-          <p style={styles.subtitle}>Sign in to Governance Evaluation Platform</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Welcome Back
+          </h1>
+          <p className="text-gray-600">
+            Sign in to Governance Evaluation Platform
+          </p>
         </div>
         
-        <div style={styles.card}>
-          <form onSubmit={handleSubmit} style={styles.form}>
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>
-                Email Address <span style={{ color: '#ef4444' }}>*</span>
+        {/* Login Card */}
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Role Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Login As
               </label>
-              <input
-                type="email"
-                name="email"
-                placeholder="you@example.com"
-                value={formData.email}
-                onChange={handleChange}
-                style={{
-                  ...styles.input,
-                  ...(errors.email ? styles.inputError : {}),
-                }}
-                disabled={loading}
-              />
-              {errors.email && <p style={styles.error}>{errors.email}</p>}
-            </div>
-            
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>
-                Password <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <input
-                type="password"
-                name="password"
-                placeholder="Enter your password"
-                value={formData.password}
-                onChange={handleChange}
-                style={{
-                  ...styles.input,
-                  ...(errors.password ? styles.inputError : {}),
-                }}
-                disabled={loading}
-              />
-              {errors.password && <p style={styles.error}>{errors.password}</p>}
-            </div>
-            
-            <button 
-              type="submit" 
-              style={{
-                ...styles.button,
-                ...(loading ? styles.buttonDisabled : {})
-              }}
-              disabled={loading}
-              onMouseEnter={(e) => !loading && (e.target.style.background = '#1d4ed8')}
-              onMouseLeave={(e) => !loading && (e.target.style.background = '#2563eb')}
-            >
-              {loading ? (
-                <>
-                  <span>⏳</span>
-                  <span>Signing in...</span>
-                </>
-              ) : (
-                'Sign In'
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, role: USER_ROLES.ORGANIZATION })}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    formData.role === USER_ROLES.ORGANIZATION
+                      ? 'border-blue-600 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-center">
+                    <div className="font-semibold">Organization</div>
+                    <div className="text-xs mt-1 text-gray-500">Submit evaluations</div>
+                  </div>
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, role: USER_ROLES.EVALUATOR })}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    formData.role === USER_ROLES.EVALUATOR
+                      ? 'border-blue-600 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-center">
+                    <div className="font-semibold">Evaluator</div>
+                    <div className="text-xs mt-1 text-gray-500">Review submissions</div>
+                  </div>
+                </button>
+              </div>
+              {errors.role && (
+                <p className="text-red-500 text-sm mt-1">{errors.role}</p>
               )}
-            </button>
+            </div>
+
+            <Input
+              type="email"
+              name="email"
+              label="Email Address"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChange={handleChange}
+              error={errors.email}
+              required
+            />
+            
+            <Input
+              type="password"
+              name="password"
+              label="Password"
+              placeholder="Enter your password"
+              value={formData.password}
+              onChange={handleChange}
+              error={errors.password}
+              required
+            />
+            
+            <Button type="submit" variant="primary" size="lg" fullWidth>
+              Sign In as {formData.role === USER_ROLES.ORGANIZATION ? 'Organization' : 'Evaluator'}
+            </Button>
           </form>
           
-          <div style={styles.footer}>
-            Don't have an account?{' '}
-            <Link to="/register" style={styles.link}>
-              Sign up
-            </Link>
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{' '}
+              <Link to={ROUTES.REGISTER} className="text-blue-600 hover:text-blue-700 font-medium">
+                Sign up
+              </Link>
+            </p>
           </div>
         </div>
         
-        <p style={styles.securityNote}>
+        <p className="mt-8 text-center text-sm text-gray-500">
           🔒 Protected by industry-standard encryption
         </p>
       </div>
