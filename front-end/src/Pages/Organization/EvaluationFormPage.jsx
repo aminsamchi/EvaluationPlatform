@@ -6,17 +6,17 @@ const EvaluationFormPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const user = JSON.parse(localStorage.getItem('governance_user') || '{}');
-  
+
   const [evaluation, setEvaluation] = useState(null);
   const [responses, setResponses] = useState({});
   const [expandedPrinciples, setExpandedPrinciples] = useState([1]); // First principle expanded by default
   const [expandedPractices, setExpandedPractices] = useState({});
   const [saving, setSaving] = useState(false);
-  
+
   useEffect(() => {
     loadEvaluation();
   }, [id]);
-  
+
   const loadEvaluation = () => {
     const data = localStorage.getItem(`evaluation_${id}`);
     if (data) {
@@ -28,10 +28,10 @@ const EvaluationFormPage = () => {
       navigate('/organization/evaluations');
     }
   };
-  
+
   const handleMaturityChange = (principleId, practiceId, criterionId, level) => {
     const key = `${principleId}-${practiceId}-${criterionId}`;
-    
+
     setResponses(prev => ({
       ...prev,
       [key]: {
@@ -43,10 +43,10 @@ const EvaluationFormPage = () => {
       }
     }));
   };
-  
+
   const handleCommentChange = (principleId, practiceId, criterionId, comment) => {
     const key = `${principleId}-${practiceId}-${criterionId}`;
-    
+
     setResponses(prev => ({
       ...prev,
       [key]: {
@@ -58,35 +58,62 @@ const EvaluationFormPage = () => {
       }
     }));
   };
-  
+
   const handleFileUpload = (principleId, practiceId, criterionId, event) => {
     const file = event.target.files[0];
     if (!file) return;
-    
-    const key = `${principleId}-${practiceId}-${criterionId}`;
-    
-    setResponses(prev => ({
-      ...prev,
-      [key]: {
-        ...prev[key],
-        principleId,
-        practiceId,
-        criterionId,
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-      }
-    }));
+
+    // Limit file size to 500KB to prevent localStorage quota exceeded
+    if (file.size > 500 * 1024) {
+      alert('File size exceeds 500KB limit. Please upload a smaller file.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64String = e.target.result;
+      const key = `${principleId}-${practiceId}-${criterionId}`;
+
+      setResponses(prev => ({
+        ...prev,
+        [key]: {
+          ...prev[key],
+          principleId,
+          practiceId,
+          criterionId,
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          fileData: base64String, // Store file data
+        }
+      }));
+    };
+    reader.readAsDataURL(file);
   };
-  
+
+  const handleRemoveFile = (principleId, practiceId, criterionId) => {
+    const key = `${principleId}-${practiceId}-${criterionId}`;
+    setResponses(prev => {
+      const newResponses = { ...prev };
+      if (newResponses[key]) {
+        // Remove file related fields
+        delete newResponses[key].fileName;
+        delete newResponses[key].fileSize;
+        delete newResponses[key].fileType;
+        delete newResponses[key].fileData;
+      }
+      return newResponses;
+    });
+  };
+
   const togglePrinciple = (principleId) => {
-    setExpandedPrinciples(prev => 
+    setExpandedPrinciples(prev =>
       prev.includes(principleId)
         ? prev.filter(id => id !== principleId)
         : [...prev, principleId]
     );
   };
-  
+
   const togglePractice = (principleId, practiceId) => {
     const key = `${principleId}-${practiceId}`;
     setExpandedPractices(prev => ({
@@ -94,80 +121,82 @@ const EvaluationFormPage = () => {
       [key]: !prev[key]
     }));
   };
-  
+
   const calculateProgress = () => {
     const totalCriteria = GOVERNANCE_PRINCIPLES.reduce((sum, principle) => {
       return sum + principle.practices.reduce((pSum, practice) => {
         return pSum + practice.criteria.length;
       }, 0);
     }, 0);
-    
+
     const completedCriteria = Object.values(responses).filter(r => r.maturityLevel !== null && r.maturityLevel !== undefined).length;
-    
+
     return totalCriteria > 0 ? Math.round((completedCriteria / totalCriteria) * 100) : 0;
   };
-  
+
   const getPrincipleProgress = (principle) => {
     const totalCriteria = principle.practices.reduce((sum, practice) => sum + practice.criteria.length, 0);
-    
+
     const completedCriteria = principle.practices.reduce((sum, practice) => {
       return sum + practice.criteria.filter(criterion => {
         const key = `${principle.id}-${practice.id}-${criterion.id}`;
         return responses[key]?.maturityLevel !== null && responses[key]?.maturityLevel !== undefined;
       }).length;
     }, 0);
-    
+
     return { completed: completedCriteria, total: totalCriteria };
   };
-  
+
   const handleSaveDraft = () => {
     if (!evaluation) return;
-    
+
     setSaving(true);
-    
+
     const updatedEvaluation = {
       ...evaluation,
       responses,
       lastModified: new Date().toISOString(),
       status: 'draft',
     };
-    
+
     localStorage.setItem(`evaluation_${id}`, JSON.stringify(updatedEvaluation));
-    
+
     setTimeout(() => {
       setSaving(false);
       alert('Draft saved successfully!');
     }, 500);
   };
-  
+
   const handleSubmit = () => {
     const progress = calculateProgress();
-    
+
     if (progress < 100) {
       if (!window.confirm(`Your evaluation is only ${progress}% complete. Do you want to submit anyway?`)) {
         return;
       }
     }
-    
+
     const updatedEvaluation = {
       ...evaluation,
       responses,
       status: 'submitted',
       submittedDate: new Date().toISOString(),
+      organizationName: evaluation.organizationName || user.name || user.email || 'Unknown',
+      organizationId: evaluation.organizationId || user.id,
     };
-    
+
     localStorage.setItem(`evaluation_${id}`, JSON.stringify(updatedEvaluation));
-    
+
     alert('Evaluation submitted successfully!');
     navigate(`/organization/evaluations/${id}`);
   };
-  
+
   const handleLogout = () => {
     localStorage.removeItem('governance_token');
     localStorage.removeItem('governance_user');
     navigate('/login');
   };
-  
+
   const styles = {
     container: {
       minHeight: '100vh',
@@ -571,7 +600,7 @@ const EvaluationFormPage = () => {
       fontWeight: '600',
     },
   };
-  
+
   if (!evaluation) {
     return (
       <div style={{ ...styles.container, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -579,9 +608,9 @@ const EvaluationFormPage = () => {
       </div>
     );
   }
-  
+
   const overallProgress = calculateProgress();
-  
+
   return (
     <div style={styles.container}>
       {/* Header */}
@@ -591,9 +620,9 @@ const EvaluationFormPage = () => {
             <div style={styles.logoIcon}>🛡️</div>
             <span style={styles.logoText}>Governance Platform</span>
           </div>
-          
+
           <div style={styles.headerRight}>
-            <button 
+            <button
               style={styles.saveDraftBtn}
               onClick={handleSaveDraft}
               disabled={saving}
@@ -602,15 +631,15 @@ const EvaluationFormPage = () => {
             >
               {saving ? '💾 Saving...' : '💾 Save Draft'}
             </button>
-            
+
             <div style={styles.userInfo}>
               <span>👤</span>
               <span style={{ fontSize: '14px', fontWeight: '500' }}>
                 {user.fullName || 'User'}
               </span>
             </div>
-            
-            <button 
+
+            <button
               onClick={handleLogout}
               style={styles.logoutBtn}
               onMouseEnter={(e) => e.target.style.background = '#dc2626'}
@@ -621,7 +650,7 @@ const EvaluationFormPage = () => {
           </div>
         </div>
       </header>
-      
+
       <div style={styles.layout}>
         {/* Sidebar Navigation */}
         <aside style={styles.sidebar}>
@@ -630,7 +659,7 @@ const EvaluationFormPage = () => {
             {GOVERNANCE_PRINCIPLES.map((principle) => {
               const { completed, total } = getPrincipleProgress(principle);
               const isExpanded = expandedPrinciples.includes(principle.id);
-              
+
               return (
                 <div
                   key={principle.id}
@@ -652,33 +681,33 @@ const EvaluationFormPage = () => {
             })}
           </div>
         </aside>
-        
+
         {/* Main Form */}
         <main style={styles.main}>
           {/* Form Header */}
           <div style={styles.formHeader}>
             <h1 style={styles.formTitle}>Evaluation Form</h1>
             <p style={styles.formSubtitle}>{evaluation.name}</p>
-            
+
             <div style={styles.progressContainer}>
               <div style={styles.progressLabel}>
                 <span>Overall Progress</span>
                 <span>{overallProgress}%</span>
               </div>
               <div style={styles.progressBar}>
-                <div style={{...styles.progressFill, width: `${overallProgress}%`}} />
+                <div style={{ ...styles.progressFill, width: `${overallProgress}%` }} />
               </div>
             </div>
           </div>
-          
+
           {/* Principles */}
           {GOVERNANCE_PRINCIPLES.map((principle) => {
             const isExpanded = expandedPrinciples.includes(principle.id);
             const { completed, total } = getPrincipleProgress(principle);
-            
+
             return (
               <div key={principle.id} id={`principle-${principle.id}`} style={styles.principleSection}>
-                <div 
+                <div
                   style={{
                     ...styles.principleHeader,
                     ...(isExpanded ? styles.principleHeaderExpanded : {})
@@ -696,7 +725,7 @@ const EvaluationFormPage = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div style={styles.principleProgress}>
                     <span style={{ fontSize: '14px', color: '#6b7280' }}>
                       {completed}/{total} criteria
@@ -709,16 +738,16 @@ const EvaluationFormPage = () => {
                     </span>
                   </div>
                 </div>
-                
+
                 {isExpanded && (
                   <div style={styles.principleContent}>
                     {principle.practices.map((practice) => {
                       const practiceKey = `${principle.id}-${practice.id}`;
                       const isPracticeExpanded = expandedPractices[practiceKey];
-                      
+
                       return (
                         <div key={practice.id} style={styles.practiceSection}>
-                          <div 
+                          <div
                             style={styles.practiceHeader}
                             onClick={() => togglePractice(principle.id, practice.id)}
                           >
@@ -732,23 +761,23 @@ const EvaluationFormPage = () => {
                               ⌄
                             </span>
                           </div>
-                          
+
                           {isPracticeExpanded && (
                             <div style={styles.practiceContent}>
                               {practice.criteria.map((criterion) => {
                                 const key = `${principle.id}-${practice.id}-${criterion.id}`;
                                 const response = responses[key] || {};
-                                
+
                                 return (
                                   <div key={criterion.id} style={styles.criterionCard}>
                                     <div style={styles.criterionTitle}>
                                       Criterion {criterion.id}: {criterion.text}
                                     </div>
-                                    
+
                                     <div style={styles.evidenceLabel}>
                                       📎 Evidence: {criterion.evidence}
                                     </div>
-                                    
+
                                     {/* Maturity Level Selector */}
                                     <div style={styles.maturityLevels}>
                                       {MATURITY_LEVELS.map((level) => (
@@ -775,43 +804,67 @@ const EvaluationFormPage = () => {
                                         </div>
                                       ))}
                                     </div>
-                                    
+
                                     {/* File Upload */}
                                     <div style={styles.uploadSection}>
                                       <label style={styles.uploadLabel}>
                                         Supporting Evidence:
                                       </label>
-                                      <label 
-                                        style={styles.uploadArea}
-                                        onMouseEnter={(e) => Object.assign(e.currentTarget.style, styles.uploadAreaHover)}
-                                        onMouseLeave={(e) => {
-                                          e.currentTarget.style.borderColor = '#d1d5db';
-                                          e.currentTarget.style.background = '#fafafa';
-                                        }}
-                                      >
-                                        <input
-                                          type="file"
-                                          style={{ display: 'none' }}
-                                          onChange={(e) => handleFileUpload(principle.id, practice.id, criterion.id, e)}
-                                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                                        />
-                                        <div style={styles.uploadIcon}>📎</div>
-                                        <div style={styles.uploadText}>
-                                          Click to upload or drag and drop
-                                        </div>
-                                      </label>
-                                      
-                                      {response.fileName && (
+
+                                      {response.fileName ? (
                                         <div style={styles.fileInfo}>
-                                          <span>📄</span>
-                                          <span style={{ flex: 1, fontSize: '13px' }}>{response.fileName}</span>
-                                          <span style={{ fontSize: '12px', color: '#6b7280' }}>
-                                            {(response.fileSize / 1024).toFixed(1)} KB
-                                          </span>
+                                          <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            <span style={{ marginRight: '8px' }}>📄</span>
+                                            <a
+                                              href={response.fileData}
+                                              download={response.fileName}
+                                              style={{ color: '#2563eb', textDecoration: 'underline', cursor: 'pointer' }}
+                                              title="Click to download"
+                                            >
+                                              {response.fileName}
+                                            </a>
+                                            <span style={{ fontSize: '12px', color: '#6b7280', marginLeft: '8px' }}>
+                                              ({Math.round(response.fileSize / 1024)} KB)
+                                            </span>
+                                          </div>
+                                          <button
+                                            onClick={() => handleRemoveFile(principle.id, practice.id, criterion.id)}
+                                            style={{
+                                              background: 'transparent',
+                                              border: 'none',
+                                              color: '#ef4444',
+                                              fontSize: '18px',
+                                              cursor: 'pointer',
+                                              padding: '4px'
+                                            }}
+                                            title="Remove file"
+                                          >
+                                            ×
+                                          </button>
                                         </div>
+                                      ) : (
+                                        <label
+                                          style={styles.uploadArea}
+                                          onMouseEnter={(e) => Object.assign(e.currentTarget.style, styles.uploadAreaHover)}
+                                          onMouseLeave={(e) => {
+                                            e.currentTarget.style.borderColor = '#d1d5db';
+                                            e.currentTarget.style.background = '#fafafa';
+                                          }}
+                                        >
+                                          <input
+                                            type="file"
+                                            style={{ display: 'none' }}
+                                            onChange={(e) => handleFileUpload(principle.id, practice.id, criterion.id, e)}
+                                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                          />
+                                          <div style={styles.uploadIcon}>📎</div>
+                                          <div style={styles.uploadText}>Cliquer pour télécharger une preuve</div>
+                                          <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>Max 500KB</div>
+                                        </label>
                                       )}
                                     </div>
-                                    
+
+
                                     {/* Comment */}
                                     <div style={styles.commentSection}>
                                       <label style={styles.commentLabel}>
@@ -837,7 +890,7 @@ const EvaluationFormPage = () => {
               </div>
             );
           })}
-          
+
           {/* Action Buttons */}
           <div style={styles.actionButtons}>
             <button
@@ -857,9 +910,9 @@ const EvaluationFormPage = () => {
               Submit Evaluation
             </button>
           </div>
-        </main>
-      </div>
-    </div>
+        </main >
+      </div >
+    </div >
   );
 };
 

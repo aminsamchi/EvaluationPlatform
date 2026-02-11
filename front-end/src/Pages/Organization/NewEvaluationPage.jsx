@@ -4,32 +4,32 @@ import { useNavigate } from 'react-router-dom';
 const NewEvaluationPage = () => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('governance_user') || '{}');
-  
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     period: '',
   });
-  
+
   const [errors, setErrors] = useState({});
-  
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setErrors({ ...errors, [e.target.name]: '' });
   };
-  
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Evaluation name is required';
     if (!formData.period.trim()) newErrors.period = 'Period is required';
-    
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
-    
+
     // Create new evaluation
     const evaluationId = Date.now();
     const newEvaluation = {
@@ -40,24 +40,27 @@ const NewEvaluationPage = () => {
       status: 'draft',
       createdDate: new Date().toISOString(),
       responses: {},
+      organizationName: user.name || user.email || 'Unknown',
+      organizationId: user.id,
+      organizationEmail: user.email,
     };
-    
+
     // Save to localStorage
     localStorage.setItem(`evaluation_${evaluationId}`, JSON.stringify(newEvaluation));
-    
+
     console.log('✅ New evaluation created:', newEvaluation);
-    
+
     // Navigate to evaluations list
     alert(`Evaluation "${formData.name}" created successfully!`);
     navigate('/organization/evaluations');
   };
-  
+
   const handleLogout = () => {
     localStorage.removeItem('governance_token');
     localStorage.removeItem('governance_user');
     navigate('/login');
   };
-  
+
   const styles = {
     container: {
       minHeight: '100vh',
@@ -264,7 +267,7 @@ const NewEvaluationPage = () => {
       transition: 'background 0.2s',
     },
   };
-  
+
   return (
     <div style={styles.container}>
       {/* Header */}
@@ -274,7 +277,7 @@ const NewEvaluationPage = () => {
             <div style={styles.logoIcon}>🛡️</div>
             <span style={styles.logoText}>Governance Platform</span>
           </div>
-          
+
           <div style={styles.userSection}>
             <div style={styles.userInfo}>
               <span>👤</span>
@@ -282,7 +285,7 @@ const NewEvaluationPage = () => {
                 {user.fullName || 'User'}
               </span>
             </div>
-            <button 
+            <button
               onClick={handleLogout}
               style={styles.logoutBtn}
               onMouseEnter={(e) => e.target.style.background = '#dc2626'}
@@ -293,11 +296,11 @@ const NewEvaluationPage = () => {
           </div>
         </div>
       </header>
-      
+
       <div style={styles.layout}>
         {/* Sidebar */}
         <aside style={styles.sidebar}>
-          <div 
+          <div
             style={styles.menuItem}
             onClick={() => navigate('/organization/dashboard')}
             onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
@@ -306,11 +309,11 @@ const NewEvaluationPage = () => {
             <span>📊</span>
             <span>Dashboard</span>
           </div>
-          <div style={{...styles.menuItem, ...styles.menuItemActive}}>
+          <div style={{ ...styles.menuItem, ...styles.menuItemActive }}>
             <span>📝</span>
             <span>Evaluations</span>
           </div>
-          <div 
+          <div
             style={styles.menuItem}
             onClick={() => navigate('/organization/results')}
             onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
@@ -319,7 +322,7 @@ const NewEvaluationPage = () => {
             <span>📈</span>
             <span>Results</span>
           </div>
-          <div 
+          <div
             style={styles.menuItem}
             onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
@@ -328,7 +331,7 @@ const NewEvaluationPage = () => {
             <span>Settings</span>
           </div>
         </aside>
-        
+
         {/* Main Content */}
         <main style={styles.main}>
           <div style={styles.card}>
@@ -336,19 +339,19 @@ const NewEvaluationPage = () => {
             <p style={styles.subtitle}>
               Create a new governance evaluation based on the 12 principles framework
             </p>
-            
+
             <div style={styles.infoBox}>
               <div style={styles.infoTitle}>
                 <span>📋</span>
                 <span>What to expect:</span>
               </div>
               <div style={styles.infoText}>
-                This evaluation covers <strong>12 governance principles</strong> with multiple 
-                criteria for each. You'll assess your organization's maturity level (0-3) for 
+                This evaluation covers <strong>12 governance principles</strong> with multiple
+                criteria for each. You'll assess your organization's maturity level (0-3) for
                 each criterion and upload supporting evidence.
               </div>
             </div>
-            
+
             <form onSubmit={handleSubmit} style={styles.form}>
               <div style={styles.inputGroup}>
                 <label style={styles.label}>
@@ -366,7 +369,7 @@ const NewEvaluationPage = () => {
                 />
                 {errors.name && <p style={styles.error}>{errors.name}</p>}
               </div>
-              
+
               <div style={styles.inputGroup}>
                 <label style={styles.label}>
                   Description (Optional)
@@ -381,7 +384,7 @@ const NewEvaluationPage = () => {
                   onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                 />
               </div>
-              
+
               <div style={styles.inputGroup}>
                 <label style={styles.label}>
                   Evaluation Period <span style={{ color: '#ef4444' }}>*</span>
@@ -398,7 +401,7 @@ const NewEvaluationPage = () => {
                 />
                 {errors.period && <p style={styles.error}>{errors.period}</p>}
               </div>
-              
+
               <div style={styles.buttonGroup}>
                 <button
                   type="button"

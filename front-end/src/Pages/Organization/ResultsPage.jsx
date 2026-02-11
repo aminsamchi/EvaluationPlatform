@@ -19,8 +19,13 @@ const ResultsPage = () => {
       const key = localStorage.key(i);
       if (key && key.startsWith('evaluation_')) {
         const evaluation = JSON.parse(localStorage.getItem(key));
-        // Only show submitted or approved evaluations
-        if (evaluation.status === 'approved' || evaluation.status === 'submitted') {
+        // Show submitted (pending) and all reviewed evaluations
+        if (
+          evaluation.status === 'approved' ||
+          evaluation.status === 'submitted' ||
+          evaluation.status === 'rejected' ||
+          evaluation.status === 'conditional'
+        ) {
           allEvaluations.push(evaluation);
         }
       }
@@ -356,10 +361,32 @@ const ResultsPage = () => {
     );
   }
   
-  const score = calculateScore(selectedEvaluation);
-  const governanceLabel = getGovernanceLabel(score);
+  // Prefer evaluator's final score when available, otherwise fall back to organization's self-assessment
+  let score;
+  let governanceLabel;
+  const hasEvaluatorScore = selectedEvaluation?.scoring?.finalScore !== undefined && selectedEvaluation?.scoring?.finalScore !== null;
+
+  if (hasEvaluatorScore) {
+    score = selectedEvaluation.scoring.finalScore;
+    const baseLabel = getGovernanceLabel(score);
+    // If evaluator stored a specific governance label, prefer that text but keep emoji/colors from local mapping
+    if (selectedEvaluation.scoring.governanceLabel) {
+      governanceLabel = {
+        ...baseLabel,
+        label: selectedEvaluation.scoring.governanceLabel,
+      };
+    } else {
+      governanceLabel = baseLabel;
+    }
+  } else {
+    score = calculateScore(selectedEvaluation);
+    governanceLabel = getGovernanceLabel(score);
+  }
+
   const totalResponses = Object.keys(selectedEvaluation?.responses || {}).length;
   const completedResponses = Object.values(selectedEvaluation?.responses || {}).filter(r => r.maturityLevel !== null).length;
+  const status = selectedEvaluation?.status;
+  const reviewCompletedAt = selectedEvaluation?.evaluatorReview?.reviewCompleted;
   
   return (
     <div style={styles.container}>
@@ -440,11 +467,25 @@ const ResultsPage = () => {
                 setSelectedEvaluation(evaluation);
               }}
             >
-              {evaluations.map(evaluation => (
-                <option key={evaluation.id} value={evaluation.id}>
-                  {evaluation.name} - {new Date(evaluation.createdDate).toLocaleDateString()}
-                </option>
-              ))}
+              {evaluations.map(evaluation => {
+                const evalStatus = evaluation.status;
+                let suffix = '';
+                if (evaluation.scoring?.finalScore !== undefined && evalStatus === 'approved') {
+                  suffix = ' - Evaluator result';
+                } else if (evalStatus === 'submitted') {
+                  suffix = ' - Pending evaluator review';
+                } else if (evalStatus === 'rejected') {
+                  suffix = ' - Rejected by evaluator';
+                } else if (evalStatus === 'conditional') {
+                  suffix = ' - Conditional approval';
+                }
+
+                return (
+                  <option key={evaluation.id} value={evaluation.id}>
+                    {evaluation.name} - {new Date(evaluation.createdDate).toLocaleDateString()}{suffix}
+                  </option>
+                );
+              })}
             </select>
           </div>
           
@@ -455,6 +496,23 @@ const ResultsPage = () => {
             <div style={styles.labelBadge}>
               <span style={{ fontSize: '24px' }}>{governanceLabel.emoji}</span>
               <span>{governanceLabel.label}</span>
+            </div>
+            {/* Status below score to distinguish evaluator vs self-assessment */}
+            <div style={{ marginTop: '16px', fontSize: '14px', opacity: 0.9 }}>
+              {hasEvaluatorScore && status === 'approved' ? (
+                <span>
+                  Evaluator result
+                  {reviewCompletedAt && ` • Approved on ${new Date(reviewCompletedAt).toLocaleDateString()}`}
+                </span>
+              ) : status === 'submitted' ? (
+                <span>Pending evaluator review – showing organization’s self-assessment</span>
+              ) : status === 'rejected' ? (
+                <span>Rejected by evaluator – showing last known evaluation data</span>
+              ) : status === 'conditional' ? (
+                <span>Conditionally approved by evaluator</span>
+              ) : (
+                <span>Evaluation status: {status || 'unknown'}</span>
+              )}
             </div>
           </div>
           
